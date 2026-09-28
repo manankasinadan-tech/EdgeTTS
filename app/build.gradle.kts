@@ -18,13 +18,13 @@ abstract class RustBuildTask : DefaultTask() {
         val rustDirFile = rustDir.orNull?.asFile ?: return
         if (!rustDirFile.isDirectory) return
 
-        val hasCargo = try {
-            ProcessBuilder("which", "cargo").start().waitFor() == 0
+        val hasCargoNdk = try {
+            ProcessBuilder("bash", "-lc", "cargo ndk --version").start().waitFor() == 0
         } catch (e: Exception) {
             false
         }
-        if (!hasCargo) {
-            println("Cargo not found in PATH, using prebuilt JNI libraries.")
+        if (!hasCargoNdk) {
+            println("cargo ndk not found in environment, using prebuilt JNI libraries in src/main/jniLibs.")
             return
         }
 
@@ -118,10 +118,12 @@ android {
     }
 }
 
-tasks.matching {
-    it.name.startsWith("merge") && it.name.endsWith("JniLibFolders")
-}.configureEach {
-    dependsOn(rustBuildJniLibs)
+if (System.getenv("BUILD_RUST") == "true") {
+    tasks.matching {
+        it.name.startsWith("merge") && it.name.endsWith("JniLibFolders")
+    }.configureEach {
+        dependsOn(rustBuildJniLibs)
+    }
 }
 
 secrets {
